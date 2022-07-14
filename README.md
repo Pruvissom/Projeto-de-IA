@@ -1,0 +1,2 @@
+# Projeto-de-IA 
+Desenvolvido em linguagem PYTHON, o projeto proposto se trata de um jogo, onde o desafio da IA é evitar os obstaculos gerados aleatórimente no percurso, movimentando o personagem na vertical, em movimento de salto. Para isso a IA deve interpretar o movimento do salto, bem como identificar os obstaculos e tomar a melhor descisão para desvidar dos mesmos, escolhendo entrer subir ou descer, enquanto considera o próximo movimento do obstaculo. 
