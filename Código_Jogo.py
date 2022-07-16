@@ -1,201 +1,200 @@
-from operator import ge
-from pickle import TRUE
-import pygame, random , sys
-from pygame.locals import *
+# Trabalho de inteligencia artifical 
+# Alunos : Dayanni elias , Pedro Iakovy Wilmann Pires
+# Turma : VE1
+# Trabalho com objetivo de implementação das metodologias de busca , tomada de decisões  
+# em relação a inteligência artificial
 
-LARGURA = 300
-ALTURA = 800
-SPEED = 10
-GRAVIDADE = 1
-VELOCIDADE = 15
+import pygame
+import random
 
-GROUND_WIDTH = 2 * LARGURA
-GROUND_HEIGHT = 100
-
-PIPE_WIDTH = 100
-PIPE_HEIGHT = 500
-
-PIPE_GAP = 200
-
-
-
-#fonte utilizada e o tamanho 
-pygame.font.init()
-FONTE = pygame.font.SysFont('arial', 20)
-
-#crição da classe do bloco
-class bloquinho(pygame.sprite.Sprite):
-
-    def __init__(self):
-        pygame.sprite.Sprite.__init__(self)
-
-        self.images = [pygame.image.load('ia4.png').convert_alpha(),
-                       pygame.image.load('ia5.png').convert_alpha(),
-                       pygame.image.load('ia1.png').convert_alpha()]
-
-        self.speed = SPEED
-        self.current_image = 0
-        self.image = pygame.image.load('ia5.png').convert_alpha()
-        self.mask = pygame.mask.from_surface(self.image)
-        self.rect = self.image.get_rect()
-        #onde ele vai iniciar 
-        self.rect[0] = LARGURA / 2
-        self.rect[1] = ALTURA / 2
-
-    #fisica do jogo para alterar a gravidade
-    def update(self):
-        self.current_image = (self.current_image + 1) % 3
-        self.image = self.images[ self.current_image ]
-        self.speed += GRAVIDADE
-        self.rect[1] += self.speed
-    #ele pula de acordo com a velociadade
-    def pulo(self):
-        self.speed = - SPEED
-
-
-class FOGUINHO (pygame.sprite.Sprite):
-
-    def __init__(self, fogo_dois, xpos, ysize ):
-        pygame.sprite.Sprite.__init__(self)
-
-        self.image = pygame.image.load('fogo.png').convert_alpha()
-        self.rect = self.image.get_rect()
-        self.rect[0] = xpos 
-
-        size_aleatorio = random.randint(50,750)
-        #nasce dois fogos por vez no jogo e lugar e alturas diferentes e aleatorias
-        if fogo_dois:
-            self.rect[1] = - (self.rect[1] - ysize)
-            self.rect[1] = ALTURA - size_aleatorio
-        else:
-            self.rect[1] = ALTURA - ysize
-            self.rect[1] = - (self.rect[1] - ysize)
-
-        self.mask = pygame.mask.from_surface(self.image)
-
-    def update(self):
-        self.rect[0] -= VELOCIDADE 
-
-#faz com que a lava passe dando impressão de velocidades 
-class chao(pygame.sprite.Sprite):
-
-    def __init__(self, xpos):
-        pygame.sprite.Sprite.__init__(self)
-
-        self.image = pygame.image.load('chao.png').convert_alpha()
-        self.image = pygame.transform.scale(self.image, (GROUND_WIDTH, GROUND_HEIGHT))
-
-        self.mask = pygame.mask.from_surface(self.image)
-
-        self.rect = self.image.get_rect()
-        self.rect[0] = xpos
-        self.rect[1] = ALTURA - GROUND_HEIGHT
-    
-    def update(self):
-        self.rect[0] -= VELOCIDADE + 1 
-
-
-
-
-#VERIFICA SE A TELA ESTA FORA DA TELA, PARA FAZER A REPETIÇÃO
-def is_off_screen(sprite):
-    return sprite.rect[0] < -(sprite.rect[2])
-
-#gera fogo aleatorio
-def get_random_fogo(xpos):
-    size = random.randint(50,750)
-    fogo_um = FOGUINHO (False, xpos, size)
-    fogo_duplicado = FOGUINHO (True, xpos, ALTURA - size - PIPE_GAP)
-    return (fogo_um, fogo_duplicado)
-
-
-def get_random_bloco(xpos):
-    size = random.randint(50,750)
-    bloco_aleatorio = FOGUINHO (False, xpos, size)
-    return bloco_aleatorio
-
-
-
-#inicio do pygame
-pygame.init()
-screen = pygame.display.set_mode((LARGURA, ALTURA))
-
-#definindo a imagem de tras
-BACKGROUD = pygame.image.load('branco.png')
-BACKGROUD = pygame.transform.scale( BACKGROUD, (LARGURA, ALTURA))
-
-#grupo do bloco para implementação da IA 
-bloquinho_group = pygame.sprite.Group()
-for i in range(1):
-    bloco = bloquinho()
-    bloquinho_group.add(bloco)
-
-
-#faz o chao andar 
-chao_group = pygame.sprite.Group()
-for i in range(3):
-    ground = chao(GROUND_WIDTH * i)
-    chao_group.add(ground)
-
-#O FOGO APARECE DE FORMA ALEATORIA E ADICONA NOVAMENTE AO GRUPO 
-fogo_group = pygame.sprite.Group()
-for i in range(4):
-    fogo = get_random_fogo(LARGURA * i + 600)
-    fogo_group.add(fogo[0])
-    fogo_group.add(fogo[1])
-
-
-
-clock = pygame.time.Clock()  
-
-
-
+ia_joganodo = True
 geracao = 0
-ponto = 0 
-nova_geracao = 1
+contagem = 0
 
-while True:
+TELA_LARGURA = 500
+TELA_ALTURA = 800
 
-        clock.tick(20)
-        for event in pygame.event.get():
-            if event.type == QUIT:
-                 pygame.quit()
+IMAGEM_FOGO = pygame.transform.scale2x(pygame.image.load('fogo.png'))
+IMAGENS_BLOCO = [
+    pygame.transform.scale2x(pygame.image.load('ia1.png')),
+    pygame.transform.scale2x(pygame.image.load('ia4.png')),
+    pygame.transform.scale2x(pygame.image.load( 'ia5.png')),
+]
 
-            if event.type == KEYDOWN:
-                if event.key == K_SPACE:
-                     bloco.pulo()
 
-        screen.blit(BACKGROUD, (0, 0))
+pygame.font.init()
+FONTE = pygame.font.SysFont('arial', 30)
+
+class bloco:
+    IMGS = IMAGENS_BLOCO
+    # animações da rotação
+    TEMPO_ANIMACAO = 5
+
+    def __init__(self, x, y):
+        self.x = x
+        self.y = y
+        self.angulo = 0
+        self.velocidade = 0
+        self.altura = self.y
+        self.tempo = 0
+        self.contagem_imagem = 0
+        self.imagem = self.IMGS[0]
+
+    def pular(self):
+        self.velocidade = -10
+        self.tempo = 0
+        self.altura = self.y
+
+    def mover(self):
+        # calcular o deslocamento
+        self.tempo += 1
+        deslocamento = 1.5 * (self.tempo**2) + self.velocidade * self.tempo
+
+        # restringir o deslocamento e controla a gravidade do jogo
+        if deslocamento > 10:
+            deslocamento = 10
+        elif deslocamento < 0:
+            deslocamento += 5
+
+        self.y += deslocamento
+
+    def desenhar(self, tela):
+        # definir qual imagem do bloco_pos vai usar
+        self.contagem_imagem += 1
+
+        if self.contagem_imagem < self.TEMPO_ANIMACAO:
+            self.imagem = self.IMGS[0]
+        elif self.contagem_imagem < self.TEMPO_ANIMACAO*2:
+            self.imagem = self.IMGS[2]
+        elif self.contagem_imagem < self.TEMPO_ANIMACAO*3:
+            self.imagem = self.IMGS[0]
+        elif self.contagem_imagem < self.TEMPO_ANIMACAO*4:
+            self.imagem = self.IMGS[1]
+            self.contagem_imagem = 0
+
+        # desenhar a imagem
+        imagem_atualizada = self.imagem
+        tela.blit(imagem_atualizada , (self.x, self.y))
+
+    def get_mask(self):
+        return pygame.mask.from_surface(self.imagem)
+
+
+class fogo:
+    DISTANCIA = 300
+    VELOCIDADE = 10
+
+    def __init__(self, x):
+        self.x = x
+        self.altura = 0
+        self.pos_fogo_de_cima = 0
+        self.pos_fogo_de_baixo = 0
+        self.fogo_de_cima = pygame.transform.flip(IMAGEM_FOGO, False, True)
+        self.fogo_de_baixo = IMAGEM_FOGO
+        self.passou = False
+        self.definir_altura()
+
+    def definir_altura(self):
+        self.altura = random.randrange(60, 600)
+        self.pos_fogo_de_cima = self.altura - self.fogo_de_cima.get_height()
+        self.pos_fogo_de_baixo = self.altura + self.DISTANCIA
+
+    def mover(self):
+        self.x -= self.VELOCIDADE
+
+    def desenhar(self, tela):
+        tela.blit(self.fogo_de_cima, (self.x, self.pos_fogo_de_cima))
+        tela.blit(self.fogo_de_baixo, (self.x, self.pos_fogo_de_baixo))
+
+    def colidir(self, bloco_pos):
+        bloco_mask = bloco_pos.get_mask()
+        topo_mask = pygame.mask.from_surface(self.fogo_de_cima)
+        base_mask = pygame.mask.from_surface(self.fogo_de_baixo)
+
+        distan_figo_cima = (self.x - bloco_pos.x, self.pos_fogo_de_cima - round(bloco_pos.y))
+        distan_fogo_baixo = (self.x - bloco_pos.x, self.pos_fogo_de_baixo - round(bloco_pos.y))
+
+        ponto_fogo_cima = bloco_mask.overlap(topo_mask, distan_figo_cima)
+        ponto_fogo_baixo = bloco_mask.overlap(base_mask, distan_fogo_baixo)
+
+        if ponto_fogo_baixo or ponto_fogo_cima:
+            return True
+        else:
+            return False
+
+
+def desenhar_tela(tela, blocos , fogo_repeticao, pontos):
+   
+    for bloco_pos in blocos:
+        bloco_pos.desenhar(tela)
+
+    for fogo_pos in fogo_repeticao:
+        fogo_pos.desenhar(tela)
+
+    texto = FONTE.render(f"Pontuação: {pontos}", 1, (255, 0, 0))
+    tela.blit(texto, (TELA_LARGURA - 10 - texto.get_width(), 10))
+ 
+    pygame.display.update() 
+
+
+def main():
+    global geracao 
+    geracao+=1  
     
-        if is_off_screen(chao_group.sprites()[0]):
-             chao_group.remove(chao_group.sprites()[0])
-             novo_chao = chao(GROUND_WIDTH - 20)
-             chao_group.add(novo_chao)
+    blocos = [bloco(230, 350)]
 
-        if is_off_screen(fogo_group.sprites()[0]):
-             fogo_group.remove(fogo_group.sprites()[0])
-             fogo_group.remove(fogo_group.sprites()[0])
-             fogo = get_random_fogo(LARGURA * 2)
-             fogo_group.add(fogo[0])
-             fogo_group.add(fogo[1])
-             ponto = ponto + 1
+    fogo_repeticao = [fogo(700)]
+    pontos = 0
+    tela = pygame.display.set_mode((TELA_LARGURA, TELA_ALTURA))
+    relogio = pygame.time.Clock()
+    
+    rodando = True
+    while rodando:
+        relogio.tick(30)
+        tela.fill((255,255,255))
+        # interação com o usuário
+        for evento in pygame.event.get():
+            if evento.type == pygame.QUIT:
+                rodando = False
+                pygame.quit()
+                quit()
+            if evento.type == pygame.KEYDOWN:
+                if evento.key == pygame.K_SPACE:
+                    for bloco_pos in blocos:
+                        bloco_pos.pular()
 
-        #escreve a pontuação na tela     
-        screen.blit((FONTE.render(f"pontuacao : {ponto}  ", True, (255,0,0))), (150,0))
-        screen.blit((FONTE.render(f" geração : {geracao}  ", True, (255,0,0))), (20,0))
 
-        bloquinho_group.update()
-        chao_group.update()
-        fogo_group.update()
+        # mover as coisas
+        for bloco_pos in blocos:
+            bloco_pos.mover()
 
-        bloquinho_group.draw(screen)
-        fogo_group.draw(screen)
-        chao_group.draw(screen)
+        #criou um grupo para os caos     
+        adicionar_fogo = False
+        remover_fogo = []
+        for fogo_pos in fogo_repeticao:
+            for i, bloco_pos in enumerate(blocos):
+                if fogo_pos.colidir(bloco_pos):
+                    blocos.pop(i)
+                if not fogo_pos.passou and bloco_pos.x > fogo_pos.x:
+                    fogo_pos.passou = True
+                    adicionar_fogo = True
+            fogo_pos.mover()
+            if fogo_pos.x + fogo_pos.fogo_de_cima.get_width() < 0:
+                remover_fogo.append(fogo_pos)
 
-        pygame.display.update()
+        if adicionar_fogo:
+            pontos += 2
+            fogo_repeticao.append(fogo(600))
+        for fogo_pos in remover_fogo:
+            fogo_repeticao.remove(fogo_pos)
 
-        if (pygame.sprite.groupcollide(bloquinho_group, chao_group, False, False, pygame.sprite.collide_mask) or
-             pygame.sprite.groupcollide(bloquinho_group, fogo_group, False, False, pygame.sprite.collide_mask)):
-             # game over
-             break
-            
+        #nâo permite o bloco suba
+        if bloco_pos.y  > TELA_ALTURA or bloco_pos.y < 0:
+            #PERDEU 
+            break
+
+        desenhar_tela(tela, blocos, fogo_repeticao, pontos)
+
+
+if __name__ == '__main__':
+    main()
