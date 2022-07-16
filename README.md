@@ -12,7 +12,7 @@ foi gerado um ambiente virtal (AVT)
 
 Passo a passo:
 1° Baixar e instalar o VS CODE;
-2° Instalar a extenção do PYTHON 3, dentro do VS CODE; /n
+2° Instalar a extenção do PYTHON 3, dentro do VS CODE; \n
 3° Faça o donwload do arquivo "trabalho_ia.zip"; /n
 4° Extrair o arquivo para dendro da pasta do VS CODE; /n
 5° Executar o arquivo extraido, com o VS CODE; /n
